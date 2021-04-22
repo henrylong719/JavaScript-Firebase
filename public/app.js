@@ -31,3 +31,49 @@ auth.onAuthStateChanged((user) => {
     userDetails.innerHTML = '';
   }
 });
+
+// reference to a database location
+let thingsRef;
+
+// stop listening real time stream
+let unsubscribe;
+
+const db = firebase.firestore();
+
+const createThing = document.getElementById('createThing');
+const thingsList = document.getElementById('thingsList');
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    // Database Reference
+    thingsRef = db.collection('things');
+
+    createThing.onclick = () => {
+      const { serverTimestamp } = firebase.firestore.FieldValue;
+
+      thingsRef.add({
+        uid: user.uid,
+        name: faker.commerce.productName(),
+        createdAt: serverTimestamp(),
+      });
+    };
+
+    // Query
+    unsubscribe = thingsRef
+      .where('uid', '==', user.uid)
+      .orderBy('createdAt') // Requires a query
+      .onSnapshot((querySnapshot) => {
+        // runs when data changes
+        // Map results to an array of li elements
+
+        const items = querySnapshot.docs.map((doc) => {
+          return `<li>${doc.data().name}</li>`;
+        });
+
+        thingsList.innerHTML = items.join('');
+      });
+  } else {
+    // Unsubscribe when the user signs out
+    unsubscribe && unsubscribe();
+  }
+});
